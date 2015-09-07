@@ -46,6 +46,11 @@ end
 # Sigmoid: Tanh(x) = (1 + exp(-2x)) / (1 + exp(-2x))
 type Tanh <: ActivationFunction
 end
+
+# Exponentiation: Exp(x) = exp(x)
+type Exp <: ActivationFunction
+end
+
 end # module Neurons
 
 ############################################################
@@ -102,7 +107,6 @@ function backward(backend :: CPUBackend, neuron :: Neurons.Sigmoid, output :: Bl
   end
 end
 
-
 ############################################################
 # Tanh
 ############################################################
@@ -118,3 +122,19 @@ function backward(backend :: CPUBackend, neuron :: Neurons.Tanh, output :: Blob,
     @inbounds gradient.data[i] *= (1 - output.data[i] * output.data[i])
   end
 end
+
+############################################################
+# Exp
+############################################################
+function forward(backend :: CPUBackend, neuron :: Neurons.Exp, output :: Blob)
+  @simd for i = 1:length(output.data)
+    @inbounds output.data[i] = exp(output.data[i])
+  end
+end
+function backward(backend :: CPUBackend, neuron :: Neurons.Exp, output :: Blob, gradient :: Blob)
+  @simd for i = 1:length(output.data)
+    @inbounds gradient.data[i] *= exp(output.data[i])
+  end
+end
+
+

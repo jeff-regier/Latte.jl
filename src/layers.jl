@@ -8,7 +8,7 @@ export CropLayer, ConcatLayer, RandomMaskLayer, TiedInnerProductLayer
 export IdentityLayer, Index2OnehotLayer, MemoryOutputLayer
 export SquareLossLayer, SoftmaxLossLayer, MultinomialLogisticLossLayer
 export SoftlabelSoftmaxLossLayer, WassersteinLossLayer
-export AccuracyLayer
+export AccuracyLayer, GaussianNoiseLayer
 
 export setup, forward, backward, shutdown
 
@@ -205,6 +205,7 @@ include("layers/concat.jl")
 include("layers/random-mask.jl")
 include("layers/tied-inner-product.jl")
 include("layers/identity.jl")
+include("layers/gaussian-noise.jl")
 
 #############################################################
 # Utility layers
