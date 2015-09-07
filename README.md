@@ -1,9 +1,8 @@
 # Mocha
 
-[![Build Status](https://img.shields.io/travis/pluskid/Mocha.jl.svg?style=flat&branch=master)](https://travis-ci.org/pluskid/Mocha.jl)
+[![Build Status](https://travis-ci.org/jeff-regier/Mocha.jl.svg)](https://travis-ci.org/jeff-regier/Mocha.jl)
 [![Documentation Status](https://readthedocs.org/projects/mochajl/badge/?version=latest)](http://mochajl.readthedocs.org/)
-[![Mocha](http://pkg.julialang.org/badges/Mocha_release.svg)](http://pkg.julialang.org/?pkg=Mocha&ver=release)
-[![Coverage Status](https://img.shields.io/coveralls/pluskid/Mocha.jl.svg?style=flat)](https://coveralls.io/r/pluskid/Mocha.jl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/jeff-regier/Mocha.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jeff-regier/Mocha.jl?branch=master)
 [![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](LICENSE.md)
 <!--[![Build status](https://ci.appveyor.com/api/projects/status/342vcj5lj2jyegsp?svg=true)](https://ci.appveyor.com/project/pluskid/mocha-jl)-->
 
