@@ -59,9 +59,35 @@ function test_encoder_loss_layer(backend::Backend)
     test_encoder_loss_layer(backend, Float64, 1e-8)
 end
 
+function verify_encoder_loss_derivs(backend::Backend)
+    input_dim = abs(rand(Int) % 5) + 1
+    batch_size = abs(rand(Int) % 5) + 1
+    inputs = Blob[make_blob(backend, randn(input_dim, batch_size)),
+                  make_blob(backend, rand(input_dim, batch_size) + 1e-3)]
+    diffs = Blob[make_blob(backend, 100randn(input_dim, batch_size)),
+                  make_blob(backend, 100randn(input_dim, batch_size))]
+    layer = EncoderLossLayer(bottoms=[:mean_dummy, :sd_dummy])
+    state = setup(backend, layer, inputs, diffs)
+
+    for i in 1:2, j in 1:input_dim, k in 1:batch_size
+        x0 = inputs[i].data[j, k]
+        backward(backend, state, inputs, diffs)
+        dfdx = diffs[i].data[j, k]
+        function f(x::FloatingPoint)
+            inputs[i].data[j, k] = x
+            forward(backend, state, inputs)
+            inputs[i].data[j, k] = x0
+            state.loss
+        end
+        test_deriv(f, x0, dfdx)
+    end
+end
+
 if test_cpu
     test_encoder_loss_layer(backend_cpu)
+    verify_encoder_loss_derivs(backend_cpu)
 end
 if test_gpu
     test_encoder_loss_layer(backend_gpu)
+    verify_encoder_loss_derivs(backend_gpu)
 end

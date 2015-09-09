@@ -46,8 +46,11 @@ function shutdown(backend::Backend, state::GaussianNoiseLayerState)
 end
 
 
-function do_forward{T}(mean_in::Array{T}, sd_in::Array{T}, 
-        epsilon::Array{T}, z_sample_out::Array{T})
+function do_forward(state::GaussianNoiseLayerState, inputs::Vector{Blob})
+    mean_in = inputs[1].data
+    sd_in = inputs[2].data
+    epsilon = state.mvn_sample.data
+    z_sample_out = state.blobs[1].data
     @devec z_sample_out[:] = mean_in .+ (epsilon .* sd_in)
 end
 
@@ -57,8 +60,7 @@ function forward(backend::CPUBackend, state::GaussianNoiseLayerState,
         state.mvn_sample.data[i] = randn()
     end
 
-    do_forward(inputs[1].data, inputs[2].data, state.mvn_sample.data, 
-        state.blobs[1].data)
+    do_forward(state, inputs)
 end
 
 

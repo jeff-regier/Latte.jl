@@ -27,6 +27,8 @@ function test_dir(dir)
   end
 end
 
+# utility for verifying derivatives are computed correctly
+include("finite-differences.jl")
 
 ############################################################
 # Network
