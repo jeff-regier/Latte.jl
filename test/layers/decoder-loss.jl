@@ -31,7 +31,7 @@ function test_decoder_loss_layer(backend::Backend, T, eps)
     state = setup(backend, layer, inputs, diffs)
 
     ############################################################
-    # Forward Propogation
+    # Forward Propagation
     ############################################################
     forward(backend, state, inputs)
 
@@ -47,7 +47,7 @@ function test_decoder_loss_layer(backend::Backend, T, eps)
     @test -eps < loss - state.loss < eps
 
     ############################################################
-    # Backward Propogation
+    # Backward Propagation
     ############################################################
     for j in 1:p, i in 1:n
         x0 = inputs[1].data[j, i]
