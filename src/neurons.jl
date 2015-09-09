@@ -96,12 +96,14 @@ end
 ############################################################
 function forward(backend :: CPUBackend, neuron :: Neurons.PReLU, output :: Blob)
   @simd for i = 1:length(output.data)
-    @inbounds output.data[i] = max(1e-4, output.data[i])
+     @inbounds x = output.data[i]
+     @inbounds output.data[i] = x < 0. ? exp(x) : 1 + x
   end
 end
 function backward(backend :: CPUBackend, neuron :: Neurons.PReLU, output :: Blob, gradient :: Blob)
   @simd for i = 1:length(output.data)
-    @inbounds gradient.data[i] *= (output.data[i] > 1e-4)
+     @inbounds x = output.data[i]
+     @inbounds gradient.data[i] *= x < 0. ? exp(x) : 1.
   end
 end
 
