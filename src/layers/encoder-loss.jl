@@ -54,7 +54,7 @@ function forward(backend::CPUBackend, state::EncoderLossLayerState, inputs::Vect
     for i in 1:nn
         state.loss += mu[i]^2 + sigma[i]^2 - 2log(sigma[i]) - 1
     end
-    state.loss *= state.layer.weight / n
+    state.loss *= 0.5 * state.layer.weight / n
 
     # accumulate statistics
     state.loss_accum *= state.n_accum
@@ -73,14 +73,13 @@ function backward(backend::CPUBackend, state::EncoderLossLayerState,
     sigma = inputs[2].data
 
     if isa(diffs[1], CPUBlob)
-        mu_diffs = diffs[1].data
-        @devec mu_diffs[:] = 2 .* mu
+        diffs[1].data[:] = mu
         diffs[1].data[:] *= state.layer.weight / n
     end
 
     if isa(diffs[2], CPUBlob)
         sigma_diffs = diffs[2].data
-        @devec sigma_diffs[:] = 2 .* sigma - (2 ./ sigma)
+        @devec sigma_diffs[:] = sigma - (1 ./ sigma)
         diffs[2].data[:] *= state.layer.weight / n
     end
 end

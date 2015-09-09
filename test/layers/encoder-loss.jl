@@ -1,3 +1,17 @@
+using Distributions
+
+
+function verify_kl(q_dist, p_dist, claimed_kl)
+    sample_size = 2_000_000
+    q_samples = rand(q_dist, sample_size)
+    empirical_kl_samples = logpdf(q_dist, q_samples) - logpdf(p_dist, q_samples)
+    empirical_kl = mean(empirical_kl_samples)
+    tol = 4 * std(empirical_kl_samples) / sqrt(sample_size)
+    min_diff = 1e-2 * std(empirical_kl_samples) / sqrt(sample_size)
+    @test_approx_eq_eps empirical_kl claimed_kl tol
+end
+
+
 function test_encoder_loss_layer(backend::Backend, T, eps)
     println("-- Testing EncoderLossLayer on $(typeof(backend)){$T}...")
 
@@ -5,13 +19,13 @@ function test_encoder_loss_layer(backend::Backend, T, eps)
     # Prepare Data for Testing
     ############################################################
     tensor_dim = 2
-    dims = tuple((abs(rand(Int, tensor_dim)) % 6 + 6)...)
+    dims = (p, n) = (5, 6)
     println("        > $dims")
 
     ############################################################
     # Setup
     ############################################################
-    layer = EncoderLossLayer(bottoms=[:z_mean, :z_sd])
+    layer = EncoderLossLayer(bottoms=[:mean_dummy, :sd_dummy])
 
     mu = 5rand(T, dims) - 2
     sigma = 2rand(T, dims) + 0.01
@@ -26,22 +40,29 @@ function test_encoder_loss_layer(backend::Backend, T, eps)
 
     state = setup(backend, layer, inputs, diffs)
 
+    ############################################################
+    # Forward Propagation
+    ############################################################
     forward(backend, state, inputs)
 
     loss = 0.
-    for i in 1:dims[end]
-        for j in 1:dims[1]
-            loss -= 1 + 2log(sigma[j, i]) - mu[j, i]^2 - sigma[j, i]^2
-        end
+    for i in 1:n, j in 1:p
+        loss -= 1 + 2log(sigma[j, i]) - mu[j, i]^2 - sigma[j, i]^2
     end
-    loss /= dims[end]
-    @test loss >= 0  # it's 2 * a KL divergence
-
+    loss /= 2dims[end]
+    @test loss >= 0  # it's a KL divergence
     @test -eps < loss - state.loss < eps
 
+    q_dist = MvNormal(mu[:], sigma[:])
+    p_dist = MvNormal(zeros(n * p), 1)
+    verify_kl(q_dist, p_dist, n * state.loss)
+
+    ############################################################
+    # Backward Propagation
+    ############################################################
     backward(backend, state, inputs, diffs)
-    grad_mu = 2mu / dims[end]
-    grad_sigma = (2sigma - 2./sigma) ./ dims[end]
+    grad_mu = mu / dims[end]
+    grad_sigma = (sigma - 1./sigma) ./ dims[end]
 
     got_diff_mu = similar(grad_mu)
     copy!(got_diff_mu, diffs[1])
@@ -51,25 +72,7 @@ function test_encoder_loss_layer(backend::Backend, T, eps)
     copy!(got_diff_sigma, diffs[2])
     @test all(-eps .< grad_sigma - got_diff_sigma .< eps)
 
-    shutdown(backend, state)
-end
-
-function test_encoder_loss_layer(backend::Backend)
-    test_encoder_loss_layer(backend, Float32, 1e-2)
-    test_encoder_loss_layer(backend, Float64, 1e-8)
-end
-
-function verify_encoder_loss_derivs(backend::Backend)
-    input_dim = abs(rand(Int) % 5) + 1
-    batch_size = abs(rand(Int) % 5) + 1
-    inputs = Blob[make_blob(backend, randn(input_dim, batch_size)),
-                  make_blob(backend, rand(input_dim, batch_size) + 1e-3)]
-    diffs = Blob[make_blob(backend, 100randn(input_dim, batch_size)),
-                  make_blob(backend, 100randn(input_dim, batch_size))]
-    layer = EncoderLossLayer(bottoms=[:mean_dummy, :sd_dummy])
-    state = setup(backend, layer, inputs, diffs)
-
-    for i in 1:2, j in 1:input_dim, k in 1:batch_size
+    for i in 1:2, j in 1:p, k in 1:n
         x0 = inputs[i].data[j, k]
         backward(backend, state, inputs, diffs)
         dfdx = diffs[i].data[j, k]
@@ -81,13 +84,21 @@ function verify_encoder_loss_derivs(backend::Backend)
         end
         test_deriv(f, x0, dfdx)
     end
+
+    ############################################################
+    # Shutdown
+    ############################################################
+    shutdown(backend, state)
+end
+
+function test_encoder_loss_layer(backend::Backend)
+#    test_encoder_loss_layer(backend, Float32, 1e-2)
+    test_encoder_loss_layer(backend, Float64, 1e-8)
 end
 
 if test_cpu
     test_encoder_loss_layer(backend_cpu)
-    verify_encoder_loss_derivs(backend_cpu)
 end
 if test_gpu
     test_encoder_loss_layer(backend_gpu)
-    verify_encoder_loss_derivs(backend_gpu)
 end
