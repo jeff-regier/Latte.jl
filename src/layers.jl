@@ -9,6 +9,7 @@ export IdentityLayer, Index2OnehotLayer, MemoryOutputLayer
 export SquareLossLayer, SoftmaxLossLayer, MultinomialLogisticLossLayer
 export SoftlabelSoftmaxLossLayer, WassersteinLossLayer
 export AccuracyLayer, GaussianNoiseLayer, EncoderLossLayer
+export DecoderLossLayer
 
 export setup, forward, backward, shutdown
 
@@ -224,6 +225,7 @@ include("layers/softmax-loss.jl")
 include("layers/softlabel-softmax-loss.jl")
 include("layers/wasserstein-loss.jl")
 include("layers/encoder-loss.jl")
+include("layers/decoder-loss.jl")
 
 #############################################################
 # Statistics Layers
