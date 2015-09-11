@@ -15,17 +15,20 @@ function test_decoder_loss_layer(backend::Backend, T, eps)
     ############################################################
     # Setup
     ############################################################
-    layer = DecoderLossLayer(bottoms=[:mu, :x])
+    layer = DecoderLossLayer(bottoms=[:mu, :sigma, :x])
 
-    mu = max(1e-2, rand(p, n))  # sigmoid output is in [0, 1]
+    mu = rand(p, n)  # sigmoid output is in [0, 1]
+    sigma = max(1e-2, 0.2rand(p, n)) # PReLU output is > 0
     x = max(1e-2, rand(dims))  # normalized pixel values are in [0, 1]
 
     inputs = Blob[
         make_blob(backend, convert(Array{T}, mu)),
+        make_blob(backend, convert(Array{T}, sigma)),
         make_blob(backend, convert(Array{T}, x))]
 
     diffs = Blob[
         make_blob(backend, rand(T, size(inputs[1]))),  # gets overwritten
+        make_blob(backend, rand(T, size(inputs[2]))),  # gets overwritten
         NullBlob()]  # the data is fixed
 
     state = setup(backend, layer, inputs, diffs)
@@ -37,7 +40,7 @@ function test_decoder_loss_layer(backend::Backend, T, eps)
 
     loss = 0.
     for i in 1:n
-        Xi_given_zi = MvNormal(mu[:, i], sqrt(mu[:, i]))  # a random var
+        Xi_given_zi = MvNormal(mu[:, i], sigma[:, i])  # a random var
         xi = slicedim(x, tensor_dim, i)[:]  # an instance
         loss -= logpdf(Xi_given_zi, xi)
     end
@@ -49,14 +52,14 @@ function test_decoder_loss_layer(backend::Backend, T, eps)
     ############################################################
     # Backward Propagation
     ############################################################
-    for j in 1:p, i in 1:n
-        x0 = inputs[1].data[j, i]
+    for k in 1:p, j in 1:n, i in 1:2
+        x0 = inputs[i].data[k, j]
         backward(backend, state, inputs, diffs)
-        dfdx = diffs[1].data[j, i]
+        dfdx = diffs[i].data[k, j]
         function f(x::FloatingPoint)
-            inputs[1].data[j, i] = x
+            inputs[i].data[k, j] = x
             forward(backend, state, inputs)
-            inputs[1].data[j, i] = x0
+            inputs[i].data[k, j] = x0
             state.loss
         end
         test_deriv(f, x0, dfdx)
