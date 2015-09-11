@@ -39,8 +39,12 @@ end
 type LReLU <: ActivationFunction
 end
 
-# Positive Rectified-Linear: PReLU(x) = x > 0 ? x : 0.01x 
-type PReLU <: ActivationFunction
+# Exponential Rectified-Linear
+type ExpReLU <: ActivationFunction
+end
+
+# Epsilon Rectified-Linear
+type EpsReLU <: ActivationFunction
 end
 
 # Sigmoid: Sigmoid(x) = 1 / (1 + exp(-x))
@@ -92,18 +96,34 @@ function backward(backend :: CPUBackend, neuron :: Neurons.LReLU, output :: Blob
 end
 
 ############################################################
-# Positive Rectified-Linear
+# Exp Rectified-Linear
 ############################################################
-function forward(backend :: CPUBackend, neuron :: Neurons.PReLU, output :: Blob)
+function forward(backend :: CPUBackend, neuron :: Neurons.ExpReLU, output :: Blob)
   @simd for i = 1:length(output.data)
      @inbounds x = output.data[i]
      @inbounds output.data[i] = x < 0. ? exp(x) : 1 + x
   end
 end
-function backward(backend :: CPUBackend, neuron :: Neurons.PReLU, output :: Blob, gradient :: Blob)
+function backward(backend :: CPUBackend, neuron :: Neurons.ExpReLU, output :: Blob, gradient :: Blob)
   @simd for i = 1:length(output.data)
      @inbounds x = output.data[i]
      @inbounds gradient.data[i] *= x < 0. ? exp(x) : 1.
+  end
+end
+
+############################################################
+# Epsilon Rectified-Linear
+############################################################
+function forward(backend :: CPUBackend, neuron :: Neurons.EpsReLU, output :: Blob)
+  @simd for i = 1:length(output.data)
+     @inbounds x = output.data[i]
+     @inbounds output.data[i] = 1e-3 + x * (x >= 0.)
+  end
+end
+function backward(backend :: CPUBackend, neuron :: Neurons.EpsReLU, output :: Blob, gradient :: Blob)
+  @simd for i = 1:length(output.data)
+     @inbounds x = output.data[i]
+     @inbounds gradient.data[i] *= (x < 0.)
   end
 end
 
