@@ -2,7 +2,6 @@
 
 [![Build Status](https://travis-ci.org/jeff-regier/Mocha.jl.svg)](https://travis-ci.org/jeff-regier/Mocha.jl)
 [![Documentation Status](https://readthedocs.org/projects/mochajl/badge/?version=latest)](http://mochajl.readthedocs.org/)
-[![Coverage Status](https://coveralls.io/repos/jeff-regier/Mocha.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jeff-regier/Mocha.jl?branch=master)
 [![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](LICENSE.md)
 <!--[![Build status](https://ci.appveyor.com/api/projects/status/342vcj5lj2jyegsp?svg=true)](https://ci.appveyor.com/project/pluskid/mocha-jl)-->
 
@@ -66,11 +65,12 @@ common_layers = [conv, pool, conv2, pool2, fc1, fc2]
 net = Net("MNIST-train", backend, [data, common_layers..., loss])
 
 exp_dir = "snapshots"
-params = SolverParameters(max_iter=10000, regu_coef=0.0005,
+solver_method = SGD()
+params = make_solver_parameters(solver_method, max_iter=10000, regu_coef=0.0005,
     mom_policy=MomPolicy.Fixed(0.9),
     lr_policy=LRPolicy.Inv(0.01, 0.0001, 0.75),
     load_from=exp_dir)
-solver = SGD(params)
+solver = Solver(solver_method, params)
 
 setup_coffee_lounge(solver, save_into="$exp_dir/statistics.jld", every_n_iter=1000)
 
@@ -96,4 +96,3 @@ shutdown(backend)
 ## Documentation
 
 The Mocha documentation is hosted at [readthedocs.org](http://mochajl.readthedocs.org/).
-
