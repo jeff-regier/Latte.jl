@@ -3,11 +3,11 @@ export SGD
 immutable SGD <: SolverMethod
 end
 
+const defaultDict = @compat Dict(:lr_policy => LRPolicy.Fixed(0.01), :mom_policy => MomPolicy.Fixed(0.))
+
 validate_parameters(method::SGD, params::SolverParameters) = validate_parameters(params, :lr_policy, :mom_policy)
 make_solver_parameters(method::SGD; kwargs...) = merge(make_solver_parameters(),
-                                                       [:lr_policy => LRPolicy.Fixed(0.01),
-                                                        :mom_policy => MomPolicy.Fixed(0.),
-                                                        ],
+                                                       defaultDict,
                                                        SolverParameters(kwargs))
 
 type SGDSolverState <: InternalSolverState
@@ -30,8 +30,6 @@ end
 #  API functions to be implemented by each solver instance
 ############################################################
 
-list_statistics(method::SGD) = ["obj_val", "iter", "learning_rate", "momentum"]
-
 function snapshot(state::SolverState{SGDSolverState})
     SGDSolverSnapshot(state.iter, state.obj_val,
                       state.internal.learning_rate, state.internal.momentum)
@@ -40,6 +38,7 @@ end
 solver_state(net::Net, snapshot::SGDSolverSnapshot) = begin
     SolverState{SGDSolverState}(snapshot.iteration,
                                 snapshot.obj_val,
+                                Dict(),
                                 SGDSolverState(net, snapshot.learning_rate, snapshot.momentum))
 end
 

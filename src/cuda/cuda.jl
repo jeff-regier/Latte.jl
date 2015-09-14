@@ -3,15 +3,22 @@ export CUDA
 module CUDA
 export CuPtr
 
-@osx_only begin
-  const libcuda = "libcuda"
+@windows? (
+begin
+  if VERSION < v"0.4-"
+    const libcuda = find_library(["nvcuda.dll"], [""])
+  else
+    const libcuda = Libdl.find_library(["nvcuda.dll"], [""])
+  end
 end
-@linux_only begin
-  const libcuda = "libcuda"
-end
-@windows_only begin
-  const libcuda = "nvcuda.dll"
-end
+: # linux or mac
+begin
+  if VERSION < v"0.4-"
+    const libcuda = find_library(["libcuda"], [""])
+  else
+    const libcuda = Libdl.find_library(["libcuda"], [""])
+  end
+end)
 
 using Compat
 const driver_error_descriptions = @compat(Dict(
@@ -175,7 +182,7 @@ immutable CuStream
 end
 
 function null_stream()
-  CuStream(convert(Ptr{Void}, 0), true, 0)
+  CuStream(Compat.unsafe_convert(Ptr{Void}, 0), true, 0)
 end
 
 function destroy(s::CuStream)

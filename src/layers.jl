@@ -8,9 +8,11 @@ export CropLayer, ConcatLayer, RandomMaskLayer, TiedInnerProductLayer
 export IdentityLayer, Index2OnehotLayer, MemoryOutputLayer
 export SquareLossLayer, SoftmaxLossLayer, MultinomialLogisticLossLayer
 export SoftlabelSoftmaxLossLayer, WassersteinLossLayer
-export AccuracyLayer, GaussianNoiseLayer, EncoderLossLayer
-export DecoderLossLayer
+export AccuracyLayer, BinaryCrossEntropyLossLayer
+export GaussianNoiseLayer, EncoderLossLayer, DecoderLossLayer
 
+export RandomNormalLayer
+export GaussianKLLossLayer
 export setup, forward, backward, shutdown
 
 export get_param_key
@@ -207,6 +209,7 @@ include("layers/random-mask.jl")
 include("layers/tied-inner-product.jl")
 include("layers/identity.jl")
 include("layers/gaussian-noise.jl")
+include("layers/random-normal.jl")
 
 #############################################################
 # Utility layers
@@ -226,6 +229,8 @@ include("layers/softlabel-softmax-loss.jl")
 include("layers/wasserstein-loss.jl")
 include("layers/encoder-loss.jl")
 include("layers/decoder-loss.jl")
+include("layers/binary-cross-entropy-loss.jl")
+include("layers/gaussian-kl-loss.jl")
 
 #############################################################
 # Statistics Layers

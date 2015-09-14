@@ -34,10 +34,27 @@ const cublas_error_description = @compat(Dict(
 import Base.show
 show(io::IO, error::CuBLASError) = print(io, cublas_error_description[error.code])
 
+@windows? (
+begin
+  if VERSION < v"0.4-"
+    const libcublas = find_library(["cublas64_70.dll", "cublas64_65.dll", "cublas32_70.dll", "cublas32_65.dll"], [""])
+  else
+    const libcublas = Libdl.find_library(["cublas64_70.dll", "cublas64_65.dll", "cublas32_70.dll", "cublas32_65.dll"], [""])
+  end
+end
+: # linux or mac
+begin
+  if VERSION < v"0.4-"
+    const libcublas = find_library(["libcublas"], [""])
+  else
+    const libcublas = Libdl.find_library(["libcublas"], [""])
+  end
+end)
+
 macro cublascall(fv, argtypes, args...)
   f = eval(fv)
   quote
-    _curet = ccall( ($(Meta.quot(f)), "libcublas"), Cint, $argtypes, $(args...)  )
+    _curet = ccall( ($(Meta.quot(f)), $libcublas), Cint, $argtypes, $(args...)  )
     if round(Int64, _curet) != CUBLAS_STATUS_SUCCESS
       throw(CuBLASError(round(Int64, _curet)))
     end
@@ -78,7 +95,7 @@ end
 function set_vector{T}(src::Array{T}, incx::Int, dest::CuPtr, incy::Int)
   elem_size = sizeof(T)
   n = length(src)
-  src_buf = convert(Ptr{Void}, pointer(src))
+  src_buf = Compat.unsafe_convert(Ptr{Void}, pointer(src))
   set_vector(n, elem_size, src_buf, incx, dest, incy)
 end
 set_vector{T}(src::Array{T}, dest::CuPtr) = set_vector(src, 1, dest, 1)
@@ -93,7 +110,7 @@ end
 function get_vector{T}(src::CuPtr, incx::Int, dest::Array{T}, incy::Int)
   elem_size = sizeof(T)
   n = length(dest)
-  dest_buf = convert(Ptr{Void}, pointer(dest))
+  dest_buf = Compat.unsafe_convert(Ptr{Void}, pointer(dest))
   get_vector(n, elem_size, src, incx, dest_buf, incy)
 end
 get_vector{T}(src::CuPtr, dest::Array{T}) = get_vector(src, 1, dest, 1)
