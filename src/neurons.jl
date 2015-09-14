@@ -51,6 +51,10 @@ end
 type Sigmoid <: ActivationFunction
 end
 
+# Sigmoid: Sigmoid(x) = 1 / (1 + exp(-x))
+type PSigmoid <: ActivationFunction
+end
+
 # Sigmoid: Tanh(x) = (1 + exp(-2x)) / (1 + exp(-2x))
 type Tanh <: ActivationFunction
 end
@@ -137,6 +141,22 @@ function forward(backend :: CPUBackend, neuron :: Neurons.Sigmoid, output :: Blo
   end
 end
 function backward(backend :: CPUBackend, neuron :: Neurons.Sigmoid, output :: Blob, gradient :: Blob)
+  len = length(output)
+  @simd for i = 1:len
+    @inbounds gradient.data[i] *= output.data[i] * (1-output.data[i])
+  end
+end
+
+############################################################
+# PSigmoid
+############################################################
+function forward(backend :: CPUBackend, neuron :: Neurons.PSigmoid, output :: Blob)
+  len = length(output)
+  @simd for i = 1:len
+    @inbounds output.data[i] = 1e-4 + 1 / (1 + exp(-output.data[i]))
+  end
+end
+function backward(backend :: CPUBackend, neuron :: Neurons.PSigmoid, output :: Blob, gradient :: Blob)
   len = length(output)
   @simd for i = 1:len
     @inbounds gradient.data[i] *= output.data[i] * (1-output.data[i])
