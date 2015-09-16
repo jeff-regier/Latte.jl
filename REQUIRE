@@ -1,4 +1,4 @@
-julia 0.3
+julia 0.4.0-dev
 HDF5 0.4.7
 JLD
 Logging

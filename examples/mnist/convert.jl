@@ -30,8 +30,8 @@ for key in keys(datasets)
   println("Exporting $n_data digits of size $h x $w")
 
   h5open("$key.hdf5", "w") do h5
-    dset_data = d_create(h5, "data", datatype(Float32), dataspace(w, h, 1, n_data))
-    dset_label = d_create(h5, "label", datatype(Float32), dataspace(1, n_data))
+    dset_data = d_create(h5, "data", datatype(Float64), dataspace(w, h, 1, n_data))
+    dset_label = d_create(h5, "label", datatype(Float64), dataspace(1, n_data))
 
     for i = 1:n_batch
       idx = (i-1)*batch_size+1:i*batch_size
@@ -41,9 +41,9 @@ for key in keys(datasets)
       rp = randperm(length(idx))
 
       img = readbytes(data_f, batch_size * h*w)
-      img = convert(Array{Float32},img) / 256 # scale into [0,1)
+      img = convert(Array{Float64},img) / 256 # scale into [0,1)
       class = readbytes(label_f, batch_size)
-      class = convert(Array{Float32},class)
+      class = convert(Array{Float64},class)
 
       for j = 1:length(idx)
         r_idx = rp[j]
