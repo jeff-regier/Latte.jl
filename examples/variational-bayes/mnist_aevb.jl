@@ -39,7 +39,6 @@ non_data_layers = [
                      weight=1.,
                      bottoms=[:z_mean2, :z_sd2]),
 
-#=
     InnerProductLayer(name="dec1", output_dim=1200,
                       neuron=Neurons.Sigmoid(),
                       bottoms=[:z], tops=[:dec1]),
@@ -52,12 +51,13 @@ non_data_layers = [
                       neuron=Neurons.PSigmoid(),
                       bottoms=[:dec1b], tops=[:x_sd]),
     DecoderLossLayer(bottoms=[:x_mean, :x_sd, :data], weight=1.)
-=#
+]
+#=
     InnerProductLayer(name="dec", output_dim=x_dim,
                       neuron=Neurons.Sigmoid(),
                       bottoms=[:z], tops=[:dec]),
     SquareLossLayer(weight=1e-0, bottoms=[:dec, :data])
-]
+=#
 
 
 train_dl = HDF5DataLayer(name="train-data",
