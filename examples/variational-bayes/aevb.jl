@@ -69,11 +69,12 @@ wide_layers = [
     InnerProductLayer(name="z_mean_wide",
         output_dim=wide_z_dim,
         neuron=Neurons.Tanh(),
-        bottoms=[:enc1], tops=[:z_mean]),
+        bottoms=[:enc1], tops=[:z_mean_wide]),
+    IdentityLayer(bottoms=[:z_mean_wide], tops=[:z_wide]),
     InnerProductLayer(name="dec_wide",
         output_dim=x_dim,
         neuron=Neurons.Sigmoid(),
-        bottoms=[:z], tops=[:dec])]
+        bottoms=[:z_wide], tops=[:dec])]
 
 function solve_net(non_data_layers, max_iter)
     train_net = Net("train-net", backend, [train_dl, non_data_layers...])
@@ -92,7 +93,6 @@ end
 
 pretrain1_layers = [
     enc_layers[1],
-    IdentityLayer(bottoms=[:z_mean], tops=[:z]),
     wide_layers...,
     dec_layers[2:3]...]
 solve_net(pretrain1_layers, 10_000)
@@ -102,8 +102,21 @@ pretrain2_layers = [
     IdentityLayer(bottoms=[:enc1], tops=[:enc1a]),
     IdentityLayer(bottoms=[:z_mean], tops=[:z]),
     dec_layers...]
-solve_net(pretrain2_layers, 200_000)
+solve_net(pretrain2_layers, 20_000)
 
+pretrain3_layers = [
+    enc_layers...,
+    IdentityLayer(bottoms=[:z_mean], tops=[:z_mean1]),
+    IdentityLayer(bottoms=[:z_sd], tops=[:z_sd1]),
+    sampling_layers[3:5],
+    dec_layers...]
+solve_net(pretrain3_layers, 20_000)
+
+pretrain4_layers = [
+    enc_layers...,
+    sampling_layers...,
+    dec_layers...]
+solve_net(pretrain4_layers, 20_000)
 
 #=
 recon_layers = [

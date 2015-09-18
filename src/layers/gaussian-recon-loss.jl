@@ -1,49 +1,46 @@
-# Decoder Loss -- p_\theta(x | z)
+# Expected reconstruction error for Gaussian output with diagonal covariance
 
-using Devectorize
-
-
-@defstruct DecoderLossLayer Layer (
+@defstruct GaussianReconLossLayer Layer (
     name :: String = "decoder-loss",
     (weight :: FloatingPoint = 1.0, weight >= 0),
     (bottoms :: Vector{Symbol} = Symbol[], length(bottoms) == 3),
 )
-@characterize_layer(DecoderLossLayer,
+@characterize_layer(GaussianReconLossLayer,
     has_loss  => true,
     can_do_bp => true,
     is_sink   => true,
     has_stats => true,
 )
 
-type DecoderLossLayerState{T} <: LayerState
-    layer      :: DecoderLossLayer
+type GaussianReconLossLayerState{T} <: LayerState
+    layer      :: GaussianReconLossLayer
     loss       :: T
     loss_accum :: T
     n_accum    :: Int
 end
 
-function setup(backend::Backend, layer::DecoderLossLayer, inputs::Vector{Blob}, diffs::Vector{Blob})
+function setup(backend::Backend, layer::GaussianReconLossLayer, inputs::Vector{Blob}, diffs::Vector{Blob})
     data_type = eltype(inputs[1])
-    state = DecoderLossLayerState(layer, zero(data_type), zero(data_type), 0)
+    state = GaussianReconLossLayerState(layer, zero(data_type), zero(data_type), 0)
     return state
 end
-function shutdown(backend::Backend, state::DecoderLossLayerState)
+function shutdown(backend::Backend, state::GaussianReconLossLayerState)
 end
 
-function reset_statistics(state::DecoderLossLayerState)
+function reset_statistics(state::GaussianReconLossLayerState)
     state.n_accum = 0
     state.loss_accum = zero(typeof(state.loss_accum))
 end
-function dump_statistics(storage, state::DecoderLossLayerState, show::Bool)
+function dump_statistics(storage, state::GaussianReconLossLayerState, show::Bool)
     update_statistics(storage, "$(state.layer.name)-decoder-loss", state.loss_accum)
 
     if show
       loss = @sprintf("%.4f", state.loss_accum)
-      @info("  Decoder-loss (avg over $(state.n_accum)) = $loss")
+      @info("  GaussianRecon-loss (avg over $(state.n_accum)) = $loss")
     end
 end
 
-function forward(backend::CPUBackend, state::DecoderLossLayerState, inputs::Vector{Blob})
+function forward(backend::CPUBackend, state::GaussianReconLossLayerState, inputs::Vector{Blob})
     data_type = eltype(inputs[1])
     n = get_num(inputs[1])
     mu = inputs[1].data
@@ -64,7 +61,7 @@ function forward(backend::CPUBackend, state::DecoderLossLayerState, inputs::Vect
     state.n_accum += n
 end
 
-function backward(backend::CPUBackend, state::DecoderLossLayerState, 
+function backward(backend::CPUBackend, state::GaussianReconLossLayerState, 
         inputs::Vector{Blob}, diffs::Vector{Blob})
     data_type = eltype(inputs[1])
     n = get_num(inputs[1])
