@@ -90,7 +90,26 @@ new_layers = [
     original_layers[4]
 ]
 
-solve_net(new_layers, 200_000)
+solve_net(new_layers, 100_000)
+
+###############
+
+new_layers = [
+    new_layers...,
+
+    InnerProductLayer(name="z_mean_2",
+        output_dim=z_dim_2,
+        neuron=Neurons.Tanh(),
+        bottoms=[:l1_out], tops=[:l2_out]),
+    InnerProductLayer(name="dec_hidden_2",
+            output_dim=hidden_dim,
+        neuron=Neurons.ReLU(),
+        bottoms=[:l2_out], tops=[:l3_out]),
+    original_layers[4]
+]
+
+solve_net(new_layers, 100_000)
+
 
 
 
