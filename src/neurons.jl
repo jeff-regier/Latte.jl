@@ -35,7 +35,11 @@ end
 type ReLU <: ActivationFunction
 end
 
-# Leaky Rectified-Linear: LReLU(x) = x > 0 ? x : 0.01x 
+# Exponential: Exponential(x) = exp(x)
+type Exponential <: ActivationFunction
+end
+
+# Leaky Rectified-Linear: LReLU(x) = x > 0 ? x : 0.01x
 type LReLU <: ActivationFunction
 end
 
@@ -51,7 +55,7 @@ end
 type Sigmoid <: ActivationFunction
 end
 
-# Sigmoid: Sigmoid(x) = 1 / (1 + exp(-x))
+# PSigmoid: Sigmoid(x) + epsilon
 type PSigmoid <: ActivationFunction
 end
 
@@ -179,3 +183,18 @@ function backward(backend :: CPUBackend, neuron :: Neurons.Tanh, output :: Blob,
   end
 end
 
+############################################################
+# Exponential
+############################################################
+function forward(backend :: CPUBackend, neuron :: Neurons.Exponential, output :: Blob)
+  len = length(output)
+  @simd for i = 1:len
+    @inbounds output.data[i] = exp(output.data[i])
+  end
+end
+function backward(backend :: CPUBackend, neuron :: Neurons.Exponential, output :: Blob, gradient :: Blob)
+  len = length(output)
+  @simd for i = 1:len
+    @inbounds gradient.data[i] *= output.data[i]
+  end
+end
