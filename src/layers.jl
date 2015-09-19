@@ -208,7 +208,6 @@ include("layers/concat.jl")
 include("layers/random-mask.jl")
 include("layers/tied-inner-product.jl")
 include("layers/identity.jl")
-include("layers/gaussian-noise.jl")
 include("layers/random-normal.jl")
 
 #############################################################

@@ -18,30 +18,37 @@ function forward(backend::GPUBackend, state::GaussianReconLossLayerState, inputs
     n = get_num(inputs[1])
     np = length(inputs[1])
 
-    μ = inputs[1].ptr
-    σ = inputs[2].ptr
-    x = inputs[3].ptr
-    aux_ones = state.tmp_blobs[:aux_ones].ptr
-    logσ² = state.tmp_blobs[:tmp].ptr
-    scaled_sq_errs = state.tmp_blobs[:scaled_sq_errs].ptr
+    μ = inputs[1]
+    σ = inputs[2]
+    x = inputs[3]
+    aux_ones = state.tmp_blobs[:aux_ones]
+    logσ² = state.tmp_blobs[:tmp]
+    scaled_sq_errs = state.tmp_blobs[:scaled_sq_errs]
 
-    copy!(σ², σ)
-    CuVec.pow!(backend, σ², 2)
-
-    copy!(logσ², σ²)
+    copy!(logσ², σ)
     CuVec.log!(backend, logσ²)
-    Σlogσ² = CuBLAS.dot(backend.cublas_ctx, data_type, n, logσ², 1, aux_ones, 1)
+    CuVec.mul_scal!(backend, logσ², convert(data_type, 2.))
+    Σlogσ² = CuBLAS.dot(backend.cublas_ctx, data_type, np, logσ².ptr, 1, aux_ones.ptr, 1)
 
-    copy!(scaled_sq_err, μ)
-    CuVec.sub!(backend, scaled_sq_err, x)
-    CuVec.pow!(backend, scaled_sq_err, 2)
-    CuVec.div!(backend, scaled_sq_err, σ²)
+    copy!(scaled_sq_errs, μ)
+    CuVec.sub!(backend, scaled_sq_errs, x)
+    CuVec.div!(backend, scaled_sq_errs, σ)
 
-    Σscaled_sq_errs = CuBLAS.dot(backend.cublas_ctx, data_type, n,
-                              scaled_sq_errs, 1, scaled_sq_errs, 1)
-    Σlogσ² = CuBLAS.dot(backend.cublas_ctx, data_type, n, logσ², 1, logσ², 1)
+    tt = Array(data_type, size(inputs[1]))
+    copy!(tt, scaled_sq_errs)
+    println(tt)
 
-    state.loss = np * log(2pi) + Σlogσ² + scaled_sq_errs
+    CuVec.pow!(backend, scaled_sq_errs, convert(data_type, 2.))
+
+    tt = Array(data_type, size(inputs[1]))
+    copy!(tt, scaled_sq_errs)
+    println(tt)
+
+    Σscaled_sq_errs = CuBLAS.dot(backend.cublas_ctx, data_type, np,
+                              scaled_sq_errs.ptr, 1, aux_ones.ptr, 1)
+
+    println("$np  $Σlogσ²  $Σscaled_sq_errs")
+    state.loss = np * log(2pi) + Σlogσ² + Σscaled_sq_errs
     state.loss *= 0.5 * state.layer.weight / n
 
     # accumulate statistics
@@ -59,12 +66,12 @@ function backward(backend::GPUBackend, state::GaussianReconLossLayerState,
     n = get_num(inputs[1])
     np = length(inputs[1])
 
-    μ = inputs[1].ptr
-    σ = inputs[2].ptr
-    x = inputs[3].ptr
+    μ = inputs[1]
+    σ = inputs[2]
+    x = inputs[3]
 
-    tmp = state.tmp_blobs[:logσ²].ptr
-    scaled_sq_errs = state.tmp_blobs[:scaled_sq_errs].ptr
+    tmp = state.tmp_blobs[:tmp]
+    scaled_sq_errs = state.tmp_blobs[:scaled_sq_errs]
 
     c = convert(data_type, state.layer.weight / n)
 
@@ -97,18 +104,6 @@ function backward(backend::GPUBackend, state::GaussianReconLossLayerState,
     diff = diffs[1]
     if isa(diff, CuTensorBlob)
         copy!(diff, μ)
-    end
-
-    # diff = df/dσ[i] = σ - 1/σ
-    diff = diffs[2]
-
-    tmp = state.tmp_blobs[:tmp]
-    copy!(tmp, σ)
-    if isa(diff, CuTensorBlob)
-        copy!(diff, σ)
-        copy!(tmp, σ)
-        CuVec.sub!(backend, diff, tmp)
-        CuVec.mul_scal!(backend, diff, convert(data_type, state.layer.weight/num))
     end
 end
 

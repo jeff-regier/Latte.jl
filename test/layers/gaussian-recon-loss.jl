@@ -7,8 +7,8 @@ function test_gaussian_recon_loss_layer(backend::Backend, T, eps)
     ############################################################
     # Prepare Data for Testing
     ############################################################
-    tensor_dim = 3
     dims = (3, 4, 5)
+    tensor_dim = length(dims)
     p, n = prod(dims[1:end-1]), dims[end]
     println("        > $dims")
 
@@ -47,6 +47,7 @@ function test_gaussian_recon_loss_layer(backend::Backend, T, eps)
     loss /= n
     @test loss >= 0
 
+    info("expected $loss; got $(state.loss)")
     @test -eps < loss - state.loss < eps
 
     ############################################################
