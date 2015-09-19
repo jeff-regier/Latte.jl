@@ -53,17 +53,25 @@ function test_gaussian_recon_loss_layer(backend::Backend, T, eps)
     ############################################################
     # Backward Propagation
     ############################################################
-    for k in 1:p, j in 1:n, i in 1:2
-        x0 = inputs[i].data[k, j]
-        backward(backend, state, inputs, diffs)
-        dfdx = diffs[i].data[k, j]
-        function f(x::FloatingPoint)
-            inputs[i].data[k, j] = x
-            forward(backend, state, inputs)
-            inputs[i].data[k, j] = x0
-            state.loss
+    backward(backend, state, inputs, diffs)
+
+    for i in 1:2
+        input_i = Array(T, size(inputs[i]))
+        copy!(input_i, inputs[i])
+        diff_i = Array(T, size(diffs[i]))
+        copy!(diff_i, diffs[i])
+        for k in 1:p, j in 1:n
+            x0 = input_i[k, j]
+            function f(x::FloatingPoint)
+                input_i[k, j] = x
+                copy!(inputs[i], input_i)
+                forward(backend, state, inputs)
+                input_i[k, j] = x0
+                copy!(inputs[i], input_i)
+                state.loss
+            end
+            test_deriv(f, x0, diff_i[k, j])
         end
-        test_deriv(f, x0, dfdx)
     end
 
     ############################################################

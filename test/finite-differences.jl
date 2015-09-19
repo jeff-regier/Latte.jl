@@ -6,7 +6,7 @@ using Base.Test
 # numeric vectors that return a tuple (value, derivient).
 function test_deriv(f::Function, x::FloatingPoint, claimed_deriv::FloatingPoint)
     numeric_deriv, abs_err = deriv_central(f, x, 1e-3)
-    info("deriv: $numeric_deriv vs $(claimed_deriv) [tol: $abs_err]")
+    info("deriv expected $numeric_deriv; got $(claimed_deriv) [tol: $abs_err]")
     obs_err = abs(numeric_deriv - claimed_deriv)
     @test obs_err < 1e-11 || abs_err < 1e-4 || abs_err / abs(numeric_deriv) < 1e-4
     @test_approx_eq_eps numeric_deriv claimed_deriv 10abs_err
