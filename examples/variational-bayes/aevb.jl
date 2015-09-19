@@ -34,6 +34,17 @@ enc_layers = [
         neuron=Neurons.Exponential(),
         bottoms=[:enc1b], tops=[:z_sd])]
 
+wide_layers = [
+    InnerProductLayer(name="z_mean_wide",
+        output_dim=wide_z_dim,
+        neuron=Neurons.Tanh(),
+        bottoms=[:enc1], tops=[:z_mean_wide]),
+    IdentityLayer(bottoms=[:z_mean_wide], tops=[:z_wide]),
+    InnerProductLayer(name="dec_wide",
+        output_dim=hidden_dim,
+        neuron=Neurons.Sigmoid(),
+        bottoms=[:z_wide], tops=[:dec1])]
+
 sampling_layers = [
     SplitLayer(name="z_mean_split",
         bottoms=[:z_mean], tops=[:z_mean1, :z_mean2]),
@@ -51,30 +62,27 @@ sampling_layers = [
         tops=[:z]),
 
     GaussianKLLossLayer(name="encoder-loss",
-        weight=1.,
         bottoms=[:z_mean2, :z_sd2])]
 
 dec_layers = [
-    InnerProductLayer(name="dec",
-        output_dim=x_dim,
+    InnerProductLayer(name="dec1", output_dim=hidden_dim,
         neuron=Neurons.Sigmoid(),
-        bottoms=[:z], tops=[:dec]),
-    InnerProductLayer(name="x_mean",
-        output_dim=x_dim,
+        bottoms=[:z], tops=[:dec1]),
+    SplitLayer(name="dec1_split",
+        bottoms=[:dec1], tops=[:dec1a, :dec1b]),
+    InnerProductLayer(name="x_mean", output_dim=x_dim,
         neuron=Neurons.Sigmoid(),
-        bottoms=[:dec], tops=[:x_mean]),
-    SquareLossLayer(weight=1e-0, bottoms=[:x_mean, :data])]
+        bottoms=[:dec1a], tops=[:x_mean]),
+    InnerProductLayer(name="x_sd", output_dim=x_dim,
+        bias_init=ConstantInitializer(-1.),
+        weight_init=GaussianInitializer(0., 1. / hidden_dim),
+        weight_regu=L2Regu(1e5),
+        neuron=Neurons.Exponential(),
+        bottoms=[:dec1b], tops=[:x_sd])]
 
-wide_layers = [
-    InnerProductLayer(name="z_mean_wide",
-        output_dim=wide_z_dim,
-        neuron=Neurons.Tanh(),
-        bottoms=[:enc1], tops=[:z_mean_wide]),
-    IdentityLayer(bottoms=[:z_mean_wide], tops=[:z_wide]),
-    InnerProductLayer(name="dec_wide",
-        output_dim=x_dim,
-        neuron=Neurons.Sigmoid(),
-        bottoms=[:z_wide], tops=[:dec])]
+sq_recon_loss = SquareLossLayer(bottoms=[:x_mean, :data])
+expected_recon_loss = GaussianReconLossLayer(bottoms=[:x_mean, :x_sd, :data])
+
 
 function solve_net(non_data_layers, max_iter)
     train_net = Net("train-net", backend, [train_dl, non_data_layers...])
@@ -89,34 +97,60 @@ function solve_net(non_data_layers, max_iter)
     add_coffee_break(solver, TrainingSummary(), every_n_iter=batch_size)
     add_coffee_break(solver, ValidationPerformance(test_net), every_n_iter=500)
     solve(solver, train_net)
+
+    destroy(train_net)
+    destroy(test_net)
 end
 
+info("pretrain 1: only means, z wide")
 pretrain1_layers = [
     enc_layers[1],
     wide_layers...,
-    dec_layers[2:3]...]
-solve_net(pretrain1_layers, 10_000)
+    dec_layers[3],
+    IdentityLayer(bottoms=[:dec1], tops=[:dec1a]),
+    sq_recon_loss]
+solve_net(pretrain1_layers, 5_000)
 
+info("pretrain 2: only means")
 pretrain2_layers = [
     enc_layers[[1,3]]...,
     IdentityLayer(bottoms=[:enc1], tops=[:enc1a]),
     IdentityLayer(bottoms=[:z_mean], tops=[:z]),
-    dec_layers...]
-solve_net(pretrain2_layers, 20_000)
+    dec_layers[[1, 3]]...,
+    IdentityLayer(bottoms=[:dec1], tops=[:dec1a]),
+    sq_recon_loss]
+solve_net(pretrain2_layers, 5_000)
 
+info("pretrain 3: z sd--but not encoder loss; x mean")
 pretrain3_layers = [
     enc_layers...,
     IdentityLayer(bottoms=[:z_mean], tops=[:z_mean1]),
     IdentityLayer(bottoms=[:z_sd], tops=[:z_sd1]),
     sampling_layers[3:5],
-    dec_layers...]
-solve_net(pretrain3_layers, 20_000)
+    dec_layers[[1, 3]]...,
+    IdentityLayer(bottoms=[:dec1], tops=[:dec1a]),
+    sq_recon_loss]
+solve_net(pretrain3_layers, 2_000)
 
+info("pretrain 4: z sd + encoder loss; x mean")
 pretrain4_layers = [
     enc_layers...,
     sampling_layers...,
-    dec_layers...]
-solve_net(pretrain4_layers, 20_000)
+    dec_layers[[1, 3]]...,
+    IdentityLayer(bottoms=[:dec1], tops=[:dec1a]),
+    sq_recon_loss]
+solve_net(pretrain4_layers, 2_000)
+
+info("training the full net")
+train_layers = [
+    enc_layers...,
+    sampling_layers...,
+    dec_layers...,
+    expected_recon_loss]
+solve_net(train_layers, 4_000)
+
+
+shutdown(backend)
 
 #=
 recon_layers = [
@@ -184,22 +218,6 @@ add_coffee_break(solver, Snapshot(base_dir), every_n_iter=5000)
 =#
 
 #=
-    InnerProductLayer(name="dec1", output_dim=hidden_dim,
-        neuron=Neurons.Sigmoid(),
-        bottoms=[:z], tops=[:dec1]),
-    SplitLayer(name="dec1_split",
-        bottoms=[:dec1], tops=[:dec1a, :dec1b]),
-    InnerProductLayer(name="x_mean", output_dim=x_dim,
-        neuron=Neurons.Sigmoid(),
-        bottoms=[:dec1a], tops=[:x_mean]),
-    InnerProductLayer(name="x_sd", output_dim=x_dim,
-        neuron=Neurons.Exponential(),
-        bottoms=[:dec1b], tops=[:x_sd]),
-    DecoderLossLayer(bottoms=[:x_mean, :x_sd, :data], weight=1.)
-=#
-
-
-#=
 using JLD
 jdl_file = jldopen(joinpath(base_dir, "snapshot-075000.jld"))
 load_network(jdl_file, train_net)
@@ -217,6 +235,4 @@ open("profile.txt", "w") do out
 end
 =#
 
-destroy(train_net)
-destroy(test_net)
-shutdown(backend)
+
