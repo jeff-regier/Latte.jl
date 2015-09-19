@@ -13,8 +13,8 @@ end
 function forward(backend::GPUBackend, state::GaussianKLLossLayerState, inputs::Vector{Blob})
   mu  = inputs[1]
   sigma = inputs[2]
-  num = get_num(mu)
   data_type = eltype(mu)
+  n = get_num(mu)
   np = length(mu)
 
   aux_ones  = state.tmp_blobs[:aux_ones]
@@ -25,7 +25,7 @@ function forward(backend::GPUBackend, state::GaussianKLLossLayerState, inputs::V
   Σμ²  = CuBLAS.dot(backend.cublas_ctx, data_type, np, mu.ptr, 1, mu.ptr, 1)
   Σσ²  = CuBLAS.dot(backend.cublas_ctx, data_type, np, sigma.ptr, 1, sigma.ptr, 1)
   logΣ = CuBLAS.dot(backend.cublas_ctx, data_type, np, log_sigma_tmp.ptr, 1, aux_ones.ptr, 1)
-  state.loss = 0.5(Σμ² + Σσ² - 2logΣ - n) * state.layer.weight / num
+  state.loss = 0.5(Σμ² + Σσ² - 2logΣ - np) * state.layer.weight / n
 
   # accumulate statistics
   state.loss_accum *= state.n_accum
@@ -41,13 +41,13 @@ function backward(backend::GPUBackend, state::GaussianKLLossLayerState, inputs::
   mu  = inputs[1]
   sigma = inputs[2]
   data_type = eltype(mu)
-  num = get_num(mu)
+  n = get_num(mu)
 
   # diff = df/dmu[i] = mu
   diff = diffs[1]
   if isa(diff, CuTensorBlob)
     copy!(diff, mu)
-    CuVec.mul_scal!(backend, diff, convert(data_type, state.layer.weight/num))
+    CuVec.mul_scal!(backend, diff, convert(data_type, state.layer.weight / n))
   end
 
   # diff = df/dsigma[i] = sigma - 1/sigma
@@ -60,6 +60,6 @@ function backward(backend::GPUBackend, state::GaussianKLLossLayerState, inputs::
     copy!(tmp, sigma)
     CuVec.pow!(backend, tmp, convert(data_type, -1.0))
     CuVec.sub!(backend, diff, tmp)
-    CuVec.mul_scal!(backend, diff, convert(data_type, state.layer.weight/num))
+    CuVec.mul_scal!(backend, diff, convert(data_type, state.layer.weight / n))
   end
 end

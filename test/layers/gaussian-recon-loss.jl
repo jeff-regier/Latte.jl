@@ -60,6 +60,7 @@ function test_gaussian_recon_loss_layer(backend::Backend, T, eps)
         copy!(input_i, inputs[i])
         diff_i = Array(T, size(diffs[i]))
         copy!(diff_i, diffs[i])
+
         for k in 1:p, j in 1:n
             x0 = input_i[k, j]
             function f(x::FloatingPoint)
