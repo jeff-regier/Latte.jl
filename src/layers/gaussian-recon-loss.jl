@@ -1,10 +1,14 @@
 # Expected reconstruction error for Gaussian output with diagonal covariance
 
+using Devectorize
+
+
 @defstruct GaussianReconLossLayer Layer (
-    name :: String = "decoder-loss",
+    name :: String = "gaussian-recon-loss",
     (weight :: FloatingPoint = 1.0, weight >= 0),
-    (bottoms :: Vector{Symbol} = Symbol[], length(bottoms) == 3),
+    (bottoms :: Vector{Symbol} = Symbol[:mu, :sigma, :x], length(bottoms) == 3),
 )
+
 @characterize_layer(GaussianReconLossLayer,
     has_loss  => true,
     can_do_bp => true,
@@ -12,35 +16,44 @@
     has_stats => true,
 )
 
-type GaussianReconLossLayerState{T} <: LayerState
+type GaussianReconLossLayerState{T, B<:Blob} <: LayerState
     layer      :: GaussianReconLossLayer
     loss       :: T
     loss_accum :: T
     n_accum    :: Int
+
+    tmp_blobs :: Dict{Symbol, B}
 end
 
-function setup(backend::Backend, layer::GaussianReconLossLayer, inputs::Vector{Blob}, diffs::Vector{Blob})
+function setup(backend::CPUBackend, layer::GaussianReconLossLayer, 
+            inputs::Vector{Blob}, diffs::Vector{Blob})
     data_type = eltype(inputs[1])
-    state = GaussianReconLossLayerState(layer, zero(data_type), zero(data_type), 0)
-    return state
+    return GaussianReconLossLayerState(layer, zero(data_type), zero(data_type),
+                                                0, Dict{Symbol, CPUBlob}())
 end
+
 function shutdown(backend::Backend, state::GaussianReconLossLayerState)
+    for blob in values(state.tmp_blobs)
+        destroy(blob)
+    end
 end
 
 function reset_statistics(state::GaussianReconLossLayerState)
     state.n_accum = 0
     state.loss_accum = zero(typeof(state.loss_accum))
 end
+
 function dump_statistics(storage, state::GaussianReconLossLayerState, show::Bool)
-    update_statistics(storage, "$(state.layer.name)-decoder-loss", state.loss_accum)
+    update_statistics(storage, "$(state.layer.name)-recon-loss", state.loss_accum)
 
     if show
       loss = @sprintf("%.4f", state.loss_accum)
-      @info("  GaussianRecon-loss (avg over $(state.n_accum)) = $loss")
+      @info("  gaussian-recon-loss (avg over $(state.n_accum)) = $loss")
     end
 end
 
-function forward(backend::CPUBackend, state::GaussianReconLossLayerState, inputs::Vector{Blob})
+function forward(backend::CPUBackend, state::GaussianReconLossLayerState,
+            inputs::Vector{Blob})
     data_type = eltype(inputs[1])
     n = get_num(inputs[1])
     mu = inputs[1].data
@@ -62,7 +75,7 @@ function forward(backend::CPUBackend, state::GaussianReconLossLayerState, inputs
 end
 
 function backward(backend::CPUBackend, state::GaussianReconLossLayerState, 
-        inputs::Vector{Blob}, diffs::Vector{Blob})
+            inputs::Vector{Blob}, diffs::Vector{Blob})
     data_type = eltype(inputs[1])
     n = get_num(inputs[1])
     mu = inputs[1].data
@@ -85,5 +98,4 @@ function backward(backend::CPUBackend, state::GaussianReconLossLayerState,
         raise("last blob should be a data blob")
     end
 end
-
 

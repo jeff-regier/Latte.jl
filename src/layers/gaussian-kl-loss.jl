@@ -48,11 +48,11 @@ function reset_statistics(state::GaussianKLLossLayerState)
 end
 
 function dump_statistics(storage, state::GaussianKLLossLayerState, show::Bool)
-  update_statistics(storage, "$(state.layer.name)-encoder-loss", state.loss_accum)
+  update_statistics(storage, "$(state.layer.name)-kl-loss", state.loss_accum)
 
   if show
     loss = @sprintf("%.4f", state.loss_accum)
-    @info("  GaussianKL-loss (avg over $(state.n_accum)) = $loss")
+    @info("  gaussian-kl-loss (avg over $(state.n_accum)) = $loss")
   end
 end
 
