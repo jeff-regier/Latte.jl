@@ -1,7 +1,5 @@
 # Expected reconstruction error for Gaussian output with diagonal covariance
 
-using Devectorize
-
 
 @defstruct GaussianReconLossLayer Layer (
     name :: String = "gaussian-recon-loss",
@@ -56,12 +54,13 @@ function forward(backend::CPUBackend, state::GaussianReconLossLayerState,
             inputs::Vector{Blob})
     data_type = eltype(inputs[1])
     n = get_num(inputs[1])
+    np = length(inputs[1])
     mu = inputs[1].data
     sigma = inputs[2].data
     x = inputs[3].data
 
     state.loss = 0
-    for i in 1:length(mu)
+    for i in 1:np
         state.loss += log(2pi) + 2log(sigma[i]) + (x[i] - mu[i])^2 / sigma[i]^2
     end
     state.loss *= 0.5 * state.layer.weight / n
@@ -78,19 +77,22 @@ function backward(backend::CPUBackend, state::GaussianReconLossLayerState,
             inputs::Vector{Blob}, diffs::Vector{Blob})
     data_type = eltype(inputs[1])
     n = get_num(inputs[1])
+    np = length(inputs[1])
     mu = inputs[1].data
     sigma = inputs[2].data
     x = inputs[3].data
 
     if isa(diffs[1], CPUBlob)
-        mu_diffs = diffs[1].data
-        @devec mu_diffs[:] = -(x - mu) ./ (sigma.^2)
+        for i in 1:np
+            diffs[1].data[i] = -(x[i] - mu[i]) / sigma[i]^2
+        end
         diffs[1].data[:] *= state.layer.weight / n
     end
 
     if isa(diffs[2], CPUBlob)
-        sigma_diffs = diffs[2].data
-        @devec sigma_diffs[:] = 1 ./ sigma - (x - mu).^2 ./ (sigma.^3)
+        for i in 1:np
+            diffs[2].data[i] = 1 ./ sigma[i] - (x[i] - mu[i])^2 / sigma[i]^3
+        end
         diffs[2].data[:] *= state.layer.weight / n
     end
 
