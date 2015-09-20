@@ -72,81 +72,47 @@ dec_layers = [
         bottoms=[:x_sd_0],
         tops=[:x_sd])]
 
-
-sq_recon_loss = SquareLossLayer(bottoms=[:x_mean, :data])
 expected_recon_loss = GaussianReconLossLayer(bottoms=[:x_mean, :x_sd, :data])
 
 
-function solve_net(non_data_layers, to_train, max_iter)
-    train_net = Net("train-net", backend, [train_dl, non_data_layers...])
-    test_net = Net("test-net", backend, [test_dl, non_data_layers...])
-
-    adam_instance = Adam()
-    params = make_solver_parameters(adam_instance;
-        max_iter=max_iter,
-        regu_coef=1e-4,
-        lr_policy=LRPolicy.Fixed(1e-3))
-    solver = Solver(adam_instance, params)
-    add_coffee_break(solver, TrainingSummary(), every_n_iter=batch_size)
-    add_coffee_break(solver, ValidationPerformance(test_net), every_n_iter=500)
-
-    freeze_all!(train_net)
-    for ln in to_train
-        unfreeze!(train_net, ln)
-    end
-
-    solve(solver, train_net)
-
-    train_net, test_net
-#    destroy(train_net)
-#    destroy(test_net)
-end
-
-
-#=
-info("train 1: only means")
-train1_layers = [
-    enc_layers[[1,3]]...,
-    IdentityLayer(bottoms=[:enc1], tops=[:enc1a]),
-    IdentityLayer(bottoms=[:z_mean], tops=[:z]),
-    dec_layers[[1, 3]]...,
-    IdentityLayer(bottoms=[:dec1], tops=[:dec1a]),
-    sq_recon_loss]
-to_train1 = ["enc1", "z_mean", "dec1", "x_mean"]
-solve_net(train1_layers, to_train1, 20_000);
-=#
-
-info("train 5: full net")
-train_layers = [
+non_data_layers = [
     enc_layers...,
     sampling_layers...,
     dec_layers...,
     expected_recon_loss]
-to_train5 = ["enc1", "z_mean", "z_sd", "dec1", "x_mean", "x_sd_0"]
-train_net, test_net = solve_net(train_layers, to_train5, 50_000)
+
+train_net = Net("train-net", backend, [train_dl, non_data_layers...])
+test_net = Net("test-net", backend, [test_dl, non_data_layers...])
+
+adam_instance = Adam()
+params = make_solver_parameters(adam_instance;
+    max_iter=1_200_000,
+    regu_coef=1e-4,
+    lr_policy=LRPolicy.Fixed(1e-3))
+solver = Solver(adam_instance, params)
+add_coffee_break(solver, TrainingSummary(), every_n_iter=10000)
+add_coffee_break(solver, ValidationPerformance(test_net), every_n_iter=10000)
+
+base_dir = "snapshots_sat"
+setup_coffee_lounge(solver, save_into="$base_dir/statistics.jld", every_n_iter=30000)
+add_coffee_break(solver, Snapshot(base_dir), every_n_iter=30000)
+
+solve(solver, train_net)
+
+destroy(train_net)
+destroy(test_net)
 
 
+shutdown(backend)
+
+1
+
+#=
 function vblob(blob)
     ret = Array(Float32, blob.shape)
     copy!(ret, blob)
     ret
 end
-
-
-
-
-1
-
-#=
-
-
-#shutdown(backend)
-=#
-
-#=
-base_dir = "snapshots_tinyencloss_z50_sqloss"
-    setup_coffee_lounge(solver, save_into="$base_dir/statistics.jld", every_n_iter=5000)
-add_coffee_break(solver, Snapshot(base_dir), every_n_iter=5000)
 =#
 
 #=
@@ -157,13 +123,5 @@ close(jdl_file)
 
 forward(train_net)
 backward(train_net)
-=#
-
-#=
-Profile.init(int(1e8), 0.001)
-@profile solve(solver, train_net)
-open("profile.txt", "w") do out
-  Profile.print(out)
-end
 =#
 
