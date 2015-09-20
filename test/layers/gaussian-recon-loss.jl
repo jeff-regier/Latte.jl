@@ -82,7 +82,6 @@ function test_gaussian_recon_loss_layer(backend::Backend, T, eps)
 end
 
 function test_gaussian_recon_loss_layer(backend::Backend)
-#    test_gaussian_recon_loss_layer(backend, Float32, 1e-3)
     test_gaussian_recon_loss_layer(backend, Float64, 1e-8)
 end
 

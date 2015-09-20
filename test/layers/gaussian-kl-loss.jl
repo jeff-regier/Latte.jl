@@ -80,12 +80,12 @@ function test_gaussian_kl_loss_layer_2(backend::Backend, T, eps)
     ############################################################
     layer = GaussianKLLossLayer(bottoms=[:mean_dummy, :sd_dummy])
 
-    mu = 5rand(T, dims) - 2
-    sigma = 2rand(T, dims) + 0.01
+    mu = 5rand(dims) - 2
+    sigma = 2rand(dims) + 0.01
 
     inputs = Blob[
-        make_blob(backend, mu),    # mean blob
-        make_blob(backend, sigma)]    # sd blob
+        make_blob(backend, convert(Array{T}, mu)),    # mean blob
+        make_blob(backend, convert(Array{T}, sigma))]    # sd blob
 
     diffs = Blob[
         make_blob(backend, rand(T, dims) + 4), # mean diff
@@ -117,11 +117,11 @@ function test_gaussian_kl_loss_layer_2(backend::Backend, T, eps)
     grad_mu = mu / dims[end]
     grad_sigma = (sigma - 1./sigma) ./ dims[end]
 
-    got_diff_mu = similar(grad_mu)
+    got_diff_mu = Array(T, dims...)
     copy!(got_diff_mu, diffs[1])
     @test all(-eps .< grad_mu - got_diff_mu .< eps)
 
-    got_diff_sigma = similar(grad_sigma)
+    got_diff_sigma = Array(T, dims...)
     copy!(got_diff_sigma, diffs[2])
     @test all(-eps .< grad_sigma - got_diff_sigma .< eps)
 
@@ -154,8 +154,7 @@ end
 function test_gaussian_kl_loss_layer(backend::Backend)
   test_gaussian_kl_loss_layer(backend, Float32, 1e-2)
   test_gaussian_kl_loss_layer(backend, Float64, 1e-8)
-#    test_gaussian_kl_loss_layer_2(backend, Float32, 1e-2)
-    test_gaussian_kl_loss_layer_2(backend, Float64, 1e-8)
+  test_gaussian_kl_loss_layer_2(backend, Float64, 1e-8)
 end
 
 if test_gpu
