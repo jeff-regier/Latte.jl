@@ -34,7 +34,7 @@ function forward(backend::GPUBackend, state::BernoulliReconLossLayerState, input
 
     copy!(tmp2, tmp1)
     CuVec.log!(backend, tmp2)
-    ll = CuBLAS.dot(backend.cublas_ctx, data_type, np, tmp.ptr, 1, aux_ones.ptr, 1)
+    ll = CuBLAS.dot(backend.cublas_ctx, data_type, np, tmp2.ptr, 1, aux_ones.ptr, 1)
 
     state.loss = -ll * state.layer.weight / n
 
