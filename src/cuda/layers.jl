@@ -33,6 +33,7 @@ include("layers/wasserstein-loss.jl")
 include("layers/binary-cross-entropy-loss.jl")
 include("layers/gaussian-kl-loss.jl")
 include("layers/gaussian-recon-loss.jl")
+include("layers/bernoulli-recon-loss.jl")
 
 #############################################################
 # Statistics Layers

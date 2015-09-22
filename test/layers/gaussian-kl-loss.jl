@@ -152,7 +152,7 @@ function test_gaussian_kl_loss_layer_2(backend::Backend, T, eps)
 end
 
 function test_gaussian_kl_loss_layer(backend::Backend)
-  test_gaussian_kl_loss_layer(backend, Float32, 1e-2)
+  test_gaussian_kl_loss_layer(backend, Float32, 1e-1)
   test_gaussian_kl_loss_layer(backend, Float64, 1e-8)
   test_gaussian_kl_loss_layer_2(backend, Float64, 1e-8)
 end

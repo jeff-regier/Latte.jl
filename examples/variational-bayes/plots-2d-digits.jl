@@ -16,3 +16,6 @@ close(jdl_file)
 
 forward(train_net)
 backward(train_net)
+
+forward(test_net)
+backward(test_net)

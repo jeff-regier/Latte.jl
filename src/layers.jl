@@ -9,7 +9,7 @@ export IdentityLayer, Index2OnehotLayer, MemoryOutputLayer
 export SquareLossLayer, SoftmaxLossLayer, MultinomialLogisticLossLayer
 export SoftlabelSoftmaxLossLayer, WassersteinLossLayer
 export AccuracyLayer, BinaryCrossEntropyLossLayer
-export GaussianNoiseLayer, GaussianReconLossLayer
+export GaussianReconLossLayer, BernoulliReconLossLayer
 
 export RandomNormalLayer
 export GaussianKLLossLayer
@@ -229,6 +229,7 @@ include("layers/wasserstein-loss.jl")
 include("layers/binary-cross-entropy-loss.jl")
 include("layers/gaussian-kl-loss.jl")
 include("layers/gaussian-recon-loss.jl")
+include("layers/bernoulli-recon-loss.jl")
 
 #############################################################
 # Statistics Layers
