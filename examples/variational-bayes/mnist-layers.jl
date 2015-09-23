@@ -52,20 +52,11 @@ dec_layers = [
     InnerProductLayer(name="dec1", output_dim=hidden_dim,
         neuron=Neurons.Sigmoid(),
         bottoms=[:z], tops=[:dec1]),
-    SplitLayer(name="dec1_split",
-        bottoms=[:dec1], tops=[:dec1a, :dec1b]),
     InnerProductLayer(name="x_mean", output_dim=x_dim,
         neuron=Neurons.Sigmoid(),
-        bottoms=[:dec1a], tops=[:x_mean]),
-    InnerProductLayer(name="x_sd_0", output_dim=x_dim,
-        neuron=Neurons.Exponential(),
-        bottoms=[:dec1b], tops=[:x_sd_0]),
-    PowerLayer(name="x_sd",
-        shift=1e-3,
-        bottoms=[:x_sd_0],
-        tops=[:x_sd])]
+        bottoms=[:dec1], tops=[:x_mean])]
 
-expected_recon_loss = GaussianReconLossLayer(bottoms=[:x_mean, :x_sd, :data])
+expected_recon_loss = BernoulliReconLossLayer(bottoms=[:x_mean, :data])
 
 
 non_data_layers = [
