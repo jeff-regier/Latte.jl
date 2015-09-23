@@ -53,38 +53,39 @@ end
 function forward(backend::CPUBackend, state::BernoulliReconLossLayerState,
             inputs::Vector{Blob})
     data_type = eltype(inputs[1])
-    n = get_num(inputs[1])
-    np = length(inputs[1])
+    N = get_num(inputs[1])
+    ND = length(inputs[1])
     p = inputs[1].data
     x = inputs[2].data
 
     state.loss = 0.
-    for i in 1:np
-        state.loss -= log(1 - p[i] - x[i] + 2p[i]x[i])
+    for i in 1:ND
+        state.loss -= x[i]log(p[i])
+        state.loss -= (1 - x[i])log(1 - p[i])
     end
-    state.loss *= state.layer.weight / n
+    state.loss *= state.layer.weight / N
 
     # accumulate statistics
     state.loss_accum *= state.n_accum
-    state.loss_accum += state.loss * n
-    state.loss_accum /= state.n_accum + n
+    state.loss_accum += state.loss * N
+    state.loss_accum /= state.n_accum + N
 
-    state.n_accum += n
+    state.n_accum += N
 end
 
 function backward(backend::CPUBackend, state::BernoulliReconLossLayerState, 
             inputs::Vector{Blob}, diffs::Vector{Blob})
     data_type = eltype(inputs[1])
-    n = get_num(inputs[1])
-    np = length(inputs[1])
+    N = get_num(inputs[1])
+    ND = length(inputs[1])
     p = inputs[1].data
     x = inputs[2].data
 
     if isa(diffs[1], CPUBlob)
-        for i in 1:np
-            diffs[1].data[i] = (1. - 2x[i]) / (1 - p[i] - x[i] + 2p[i]x[i])
+        for i in 1:ND
+            diffs[1].data[i] = x[i] / p[i] - (1 - x[i]) / (1 - p[i])
         end
-        diffs[1].data[:] *= state.layer.weight / n
+        diffs[1].data[:] *= -state.layer.weight / N
     end
 
     if isa(diffs[2], CPUBlob)

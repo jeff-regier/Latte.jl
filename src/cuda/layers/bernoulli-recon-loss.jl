@@ -15,8 +15,8 @@ end
 
 function forward(backend::GPUBackend, state::BernoulliReconLossLayerState, inputs::Vector{Blob})
     data_type = eltype(inputs[1])
-    n = get_num(inputs[1])
-    np = length(inputs[1])
+    N = get_num(inputs[1])
+    ND = length(inputs[1])
 
     p = inputs[1]
     x = inputs[2]
@@ -25,33 +25,36 @@ function forward(backend::GPUBackend, state::BernoulliReconLossLayerState, input
     tmp1 = state.tmp_blobs[:tmp1]
     tmp2 = state.tmp_blobs[:tmp2]
 
-    copy!(tmp1, p)
-    CuVec.mul!(backend, tmp1, x)
-    CuVec.mul_scal!(backend, tmp1, convert(data_type, 2.))
-    CuVec.sub!(backend, tmp1, x)
+    copy!(tmp1, aux_ones)
     CuVec.sub!(backend, tmp1, p)
-    CuVec.add!(backend, tmp1, aux_ones)
+    CuVec.log!(backend, tmp1)
+    copy!(tmp2, aux_ones)
+    CuVec.sub!(backend, tmp2, x)
+    CuVec.mul!(backend, tmp1, tmp2)
 
-    copy!(tmp2, tmp1)
+    copy!(tmp2, p)
     CuVec.log!(backend, tmp2)
-    ll = CuBLAS.dot(backend.cublas_ctx, data_type, np, tmp2.ptr, 1, aux_ones.ptr, 1)
+    CuVec.mul!(backend, tmp2, x)
 
-    state.loss = -ll * state.layer.weight / n
+    CuVec.add!(backend, tmp1, tmp2)
+    ll = CuBLAS.dot(backend.cublas_ctx, data_type, ND, tmp1.ptr, 1, aux_ones.ptr, 1)
+
+    state.loss = -ll * state.layer.weight / N
 
     # accumulate statistics
     state.loss_accum *= state.n_accum
-    state.loss_accum += state.loss * n
-    state.loss_accum /= state.n_accum + n
+    state.loss_accum += state.loss * N
+    state.loss_accum /= state.n_accum + N
 
-    state.n_accum += n
+    state.n_accum += N
 end
 
 
 function backward(backend::GPUBackend, state::BernoulliReconLossLayerState,
             inputs::Vector{Blob}, diffs::Vector{Blob})
     data_type = eltype(inputs[1])
-    n = get_num(inputs[1])
-    np = length(inputs[1])
+    N = get_num(inputs[1])
+    ND = length(inputs[1])
 
     p = inputs[1]
     x = inputs[2]
@@ -60,13 +63,19 @@ function backward(backend::GPUBackend, state::BernoulliReconLossLayerState,
     tmp1 = state.tmp_blobs[:tmp1]
     tmp2 = state.tmp_blobs[:tmp2]
 
-    c = convert(data_type, state.layer.weight / n)
+    c = convert(data_type, state.layer.weight / N)
 
     if isa(diffs[1], CuTensorBlob)
-        copy!(diffs[1], aux_ones)
-        CuVec.sub!(backend, diffs[1], x)
-        CuVec.sub!(backend, diffs[1], x)
+        copy!(diffs[1], x)
+        CuVec.sub!(backend, diffs[1], aux_ones)
+        copy!(tmp1, p)
+        CuVec.sub!(backend, tmp1, aux_ones)
         CuVec.div!(backend, diffs[1], tmp1)
+
+        copy!(tmp1, x)
+        CuVec.div!(backend, tmp1, p)
+
+        CuVec.sub!(backend, diffs[1], tmp1)
         CuVec.mul_scal!(backend, diffs[1], c)
     end
 
