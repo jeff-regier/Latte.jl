@@ -9,32 +9,33 @@ export LRPolicy, get_learning_rate, MomPolicy, get_momentum
 
 module LRPolicy
 using ..Mocha
+using Compat
 type Fixed <: LearningRatePolicy
-  base_lr :: FloatingPoint
+  base_lr :: AbstractFloat
 end
 
 # base_lr * gamma ^ (floor(iter / stepsize))
 type Step <: LearningRatePolicy
-  base_lr  :: FloatingPoint
-  gamma    :: FloatingPoint
+  base_lr  :: AbstractFloat
+  gamma    :: AbstractFloat
   stepsize :: Int
 end
 
 # base_lr * gamma ^ iter
 type Exp <: LearningRatePolicy
-  base_lr :: FloatingPoint
-  gamma   :: FloatingPoint
+  base_lr :: AbstractFloat
+  gamma   :: AbstractFloat
 end
 
 type Inv <: LearningRatePolicy
-  base_lr :: FloatingPoint
-  gamma   :: FloatingPoint
-  power   :: FloatingPoint
+  base_lr :: AbstractFloat
+  gamma   :: AbstractFloat
+  power   :: AbstractFloat
 end
 
 # curr_lr *= gamma whenever performance
 # drops on the validation set
-function decay_on_validation_listener(policy, key::String, coffee_lounge::CoffeeLounge, net::Net, state::SolverState)
+function decay_on_validation_listener(policy, key::AbstractString, coffee_lounge::CoffeeLounge, net::Net, state::SolverState)
   stats = get_statistics(coffee_lounge, key)
   index = sort(collect(keys(stats)))
   if length(index) > 1
@@ -47,7 +48,7 @@ function decay_on_validation_listener(policy, key::String, coffee_lounge::Coffee
       # revert to a previously saved "good" snapshot
       if isa(policy.solver, Solver)
         Mocha.info("reverting to previous saved snapshot")
-        solver_state = load_snapshot(net, policy.solver.params.load_from, state)
+        solver_state = load_snapshot(net, policy.solver.params[:load_from], state)
         Mocha.info("snapshot at iteration $(solver_state.iter) loaded")
         copy_solver_state!(state, solver_state)
       end
@@ -56,11 +57,11 @@ function decay_on_validation_listener(policy, key::String, coffee_lounge::Coffee
 end
 
 type DecayOnValidation <: LearningRatePolicy
-  gamma       :: FloatingPoint
+  gamma       :: AbstractFloat
 
-  key           :: String
-  curr_lr       :: FloatingPoint
-  min_lr        :: FloatingPoint
+  key           :: AbstractString
+  curr_lr       :: AbstractFloat
+  min_lr        :: AbstractFloat
   listener      :: Function
   solver        :: Any
   initialized   :: Bool
@@ -104,6 +105,9 @@ end
 end # module LRPolicy
 
 get_learning_rate(policy::LearningRatePolicy) = policy.base_lr # Need an initial rate to create the state
+get_learning_rate(policy::LRPolicy.Staged) = get_learning_rate(policy.stages[policy.curr_stage][2])
+get_learning_rate(policy::LRPolicy.DecayOnValidation) = policy.curr_lr
+
 get_learning_rate(policy::LRPolicy.Fixed, state::SolverState) = policy.base_lr
 get_learning_rate(policy::LRPolicy.Step, state::SolverState) =
     policy.base_lr * policy.gamma ^ (floor(state.iter / policy.stepsize))
@@ -153,23 +157,24 @@ end
 
 module MomPolicy
 using ..Mocha.MomentumPolicy
+using Compat
 type Fixed <: MomentumPolicy
-  base_mom :: FloatingPoint
+  base_mom :: AbstractFloat
 end
 
 # min(base_mom * gamma ^ (floor(iter / stepsize)), max_mom)
 type Step <: MomentumPolicy
-  base_mom :: FloatingPoint
-  gamma    :: FloatingPoint
+  base_mom :: AbstractFloat
+  gamma    :: AbstractFloat
   stepsize :: Int
-  max_mom  :: FloatingPoint
+  max_mom  :: AbstractFloat
 end
 
 type Linear <: MomentumPolicy
-  base_mom :: FloatingPoint
-  gamma    :: FloatingPoint
+  base_mom :: AbstractFloat
+  gamma    :: AbstractFloat
   stepsize :: Int
-  max_mom  :: FloatingPoint
+  max_mom  :: AbstractFloat
 end
 
 using Compat

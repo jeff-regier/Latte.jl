@@ -2,25 +2,17 @@
 export CUDA
 module CUDA
 export CuPtr
+using Compat
 
 @windows? (
 begin
-  if VERSION < v"0.4-"
-    const libcuda = find_library(["nvcuda.dll"], [""])
-  else
-    const libcuda = Libdl.find_library(["nvcuda.dll"], [""])
-  end
+  const libcuda = Libdl.find_library(["nvcuda.dll"], [""])
 end
 : # linux or mac
 begin
-  if VERSION < v"0.4-"
-    const libcuda = find_library(["libcuda"], [""])
-  else
-    const libcuda = Libdl.find_library(["libcuda"], [""])
-  end
+  const libcuda = Libdl.find_library(["libcuda"], [""])
 end)
 
-using Compat
 const driver_error_descriptions = @compat(Dict(
   0 => "Success",
   1 => "Invalid value",
@@ -94,7 +86,7 @@ macro cucall(fv, argtypes, args...)
   quote
     _curet = ccall( ($(Meta.quot(f)), $libcuda), Cint, $argtypes, $(args...) )
     if _curet != 0
-      throw(CuDriverError(round(Int64, _curet)))
+      throw(CuDriverError(round(Int, _curet)))
     end
   end
 end
@@ -150,7 +142,7 @@ end
 ############################################################
 # Memory allocation
 ############################################################
-typealias CUdeviceptr Uint64
+typealias CUdeviceptr Ptr{Void}
 
 type CuPtr
   p::CUdeviceptr
@@ -163,7 +155,7 @@ cubox(p::CuPtr) = cubox(p.p)
 
 function cualloc(T::Type, len::Integer)
   a = CUdeviceptr[0]
-  nbytes = round(Int64, len) * sizeof(T)
+  nbytes = round(Int, len) * sizeof(T)
   @cucall(:cuMemAlloc_v2, (Ptr{CUdeviceptr}, Csize_t), a, nbytes)
   return CuPtr(a[1])
 end
@@ -200,7 +192,7 @@ end
 immutable CuModule
   handle::Ptr{Void}
 
-  function CuModule(filename::String)
+  function CuModule(filename::AbstractString)
     a = Array(Ptr{Void}, 1)
     @cucall(:cuModuleLoad, (Ptr{Ptr{Void}}, Ptr{Cchar}), a, filename)
     new(a[1])
@@ -245,7 +237,7 @@ get_dim_z(g::@compat(Tuple{Int, Int})) = 1
 get_dim_z(g::@compat(Tuple{Int, Int, Int})) = g[3]
 
 using Compat
-typealias CuDim Union(Int, @compat(Tuple{Int, Int}), @compat(Tuple{Int, Int, Int}))
+@compat typealias CuDim Union{Int, Tuple{Int, Int}, Tuple{Int, Int, Int}}
 
 # Stream management
 
@@ -272,8 +264,7 @@ function launch(f::CuFunction, grid::CuDim, block::CuDim, args::Tuple; shmem_byt
       Ptr{Void},       # stream
       Ptr{Ptr{Void}},  # kernel parameters,
       Ptr{Ptr{Void}}), # extra parameters
-      f.handle, gx, gy, gz, tx, ty, tz, shmem_bytes, stream.handle, kernel_args, 0)
+      f.handle, gx, gy, gz, tx, ty, tz, shmem_bytes, stream.handle, kernel_args, Ptr{Ptr{Void}}(0))
 end
 
 end # module CUDA
-

@@ -26,6 +26,7 @@ include("layers/random-normal.jl")
 # Loss Layers
 #############################################################
 include("layers/square-loss.jl")
+include("layers/hinge-loss.jl")
 include("layers/multinomial-logistic-loss.jl")
 include("layers/softmax-loss.jl")
 include("layers/softlabel-softmax-loss.jl")
@@ -39,3 +40,4 @@ include("layers/bernoulli-recon-loss.jl")
 # Statistics Layers
 #############################################################
 include("layers/accuracy.jl")
+include("layers/binary-accuracy.jl")

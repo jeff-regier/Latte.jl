@@ -1,21 +1,15 @@
-language: cpp
+sudo: false
+language: julia
 os:
   - linux
-compiler:
-  - gcc
+julia:
+  - 0.4
 notifications:
   email: false
-env:
-  matrix:
-    - JULIAVERSION="juliareleases"
-before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y;
-  - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y;
-  - sudo apt-get update -qq -y;
-  - sudo apt-get install libpcre3-dev julia -y;
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 script:
-  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.test("Mocha", coverage=true)'
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.build("Mocha");'
+  - julia -e 'Pkg.build("Mocha"); Pkg.test("Mocha", coverage=true)'
   - MOCHA_USE_NATIVE_EXT=true julia -e 'Pkg.build("Mocha"); Pkg.test("Mocha", coverage=true)'
 after_success:
   - julia -e 'cd(Pkg.dir("Mocha")); Pkg.add("Coverage"); include(joinpath(Pkg.dir("Mocha"), "tools/coverage-hack.jl")); Coveralls.submit(process_folder("src",["cuda"]))'

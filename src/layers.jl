@@ -7,9 +7,8 @@ export LRNLayer, DropoutLayer, ReshapeLayer, ArgmaxLayer, HDF5OutputLayer
 export CropLayer, ConcatLayer, RandomMaskLayer, TiedInnerProductLayer
 export IdentityLayer, Index2OnehotLayer, MemoryOutputLayer
 export SquareLossLayer, SoftmaxLossLayer, MultinomialLogisticLossLayer
-export SoftlabelSoftmaxLossLayer, WassersteinLossLayer
-export AccuracyLayer, BinaryCrossEntropyLossLayer
-export GaussianReconLossLayer, BernoulliReconLossLayer
+export SoftlabelSoftmaxLossLayer, WassersteinLossLayer, HingeLossLayer
+export AccuracyLayer, BinaryAccuracyLayer, BinaryCrossEntropyLossLayer
 
 export RandomNormalLayer
 export GaussianKLLossLayer
@@ -18,6 +17,8 @@ export setup, forward, backward, shutdown
 export get_param_key
 export reset_statistics, show_statistics
 export freeze!, unfreeze!, is_frozen
+
+export GaussianReconLossLayer, BernoulliReconLossLayer
 
 ############################################################
 # Implementing a Layer
@@ -230,9 +231,11 @@ include("layers/binary-cross-entropy-loss.jl")
 include("layers/gaussian-kl-loss.jl")
 include("layers/gaussian-recon-loss.jl")
 include("layers/bernoulli-recon-loss.jl")
+include("layers/hinge-loss.jl")
 
 #############################################################
 # Statistics Layers
 #############################################################
 include("layers/accuracy.jl")
+include("layers/binary-accuracy.jl")
 

@@ -2,8 +2,8 @@
 # Softmax Loss
 ############################################################
 @defstruct SoftmaxLossLayer Layer (
-  name :: String = "softmax-loss",
-  (weight :: FloatingPoint = 1.0, weight >= 0),
+  name :: AbstractString = "softmax-loss",
+  (weight :: AbstractFloat = 1.0, weight >= 0),
   weights :: Array = [],
   normalize:: Symbol = :local,
   (dim :: Int = -2, dim != 0),
@@ -56,7 +56,7 @@ function backward(backend::CPUBackend, state::SoftmaxLossLayerState, inputs::Vec
 
     idx_all = map(1:length(dims)) do i
       if i == state.logistic.op_dim
-        round(Int64, label) + 1
+        round(Int, label) + 1
       else
         dim = dims[i]
         reshape(1:dim, [j == i? dim : 1 for j = 1:length(dims)]...)
