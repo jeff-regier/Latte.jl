@@ -210,6 +210,7 @@ include("layers/random-mask.jl")
 include("layers/tied-inner-product.jl")
 include("layers/identity.jl")
 include("layers/random-normal.jl")
+include("layers/lookup-table.jl")
 
 #############################################################
 # Utility layers
