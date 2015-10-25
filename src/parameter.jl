@@ -17,7 +17,8 @@ end
 Parameter(name,blob,gradient,initializer,regularizer,constraint,lr) =
     Parameter(name, blob, gradient, initializer, regularizer, constraint, lr, RefCounter(1))
 
-function make_parameter{N}(backend::Backend, name::AbstractString, data_type::Type, dims::NTuple{N,Int},
+function make_parameter{N}(backend::Backend, name::AbstractString,
+    data_type::Type, dims::NTuple{N,Int},
     init::Initializer, regu::Regularizer, cons::Constraint, lr::AbstractFloat)
 
   blob = make_blob(backend, data_type, dims)
@@ -46,3 +47,38 @@ function destroy(param::Parameter)
     destroy(param.blob)
   end
 end
+
+
+type SparseParam <: AbstractParameter
+  name          :: AbstractString
+  blob          :: Blob
+  gradient      :: Blob
+  gradient_cols :: Blob
+  initializer   :: Initializer
+  learning_rate :: AbstractFloat # relative learning rate
+
+  rc            :: RefCounter
+end
+
+
+function make_sparse_param{N}(backend::Backend, name::AbstractString,
+    data_type::Type, dims::NTuple{N,Int}, batch_size::Int,
+    init::Initializer, lr::AbstractFloat)
+
+  blob = make_blob(backend, data_type, dims)
+  grad = make_blob(backend, data_type, dims)
+  rc   = RefCounter(1)
+
+  Parameter(name, blob, grad, init, regu, cons, lr, rc)
+end
+
+function destroy(param::SparseParameter)
+  destroy(param.gradient)
+  destroy(param.gradient_cols)
+  if dec(param.rc) == 0
+    destroy(param.blob)
+  end
+end
+
+
+

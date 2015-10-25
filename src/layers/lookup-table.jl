@@ -1,8 +1,6 @@
 @defstruct LookupTableLayer Layer (
     name :: AbstractString = "lookup-table",
-    regu :: Regularizer = NoRegu(),
     init :: Initializer = ConstantInitializer(0),
-    cons :: Constraint = NoCons(),
     lr   :: AbstractFloat = 1.0,
     (output_dim :: Int = 0, output_dim > 0),
     (tops :: Vector{Symbol} = Symbol[], length(tops) == 1),
@@ -34,7 +32,7 @@ function setup(backend::Backend, layer::LookupTableLayer, inputs::Vector{Blob},
 
     parameters = [make_parameter(backend, "lookup", data_type,
                            (out_dim, layer.n_class),
-                           layer.init, layer.regu, layer.cons, layer.lr)]
+                           layer.init, layer.lr)]
     erase!(parameters[1].gradient)
 
     return LookupTableLayerState(layer, blobs, blobs_diff, parameters)
