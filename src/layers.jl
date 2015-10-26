@@ -9,6 +9,7 @@ export IdentityLayer, Index2OnehotLayer, MemoryOutputLayer
 export SquareLossLayer, SoftmaxLossLayer, MultinomialLogisticLossLayer
 export SoftlabelSoftmaxLossLayer, WassersteinLossLayer, HingeLossLayer
 export AccuracyLayer, BinaryAccuracyLayer, BinaryCrossEntropyLossLayer
+export ReplicationLayer
 
 export RandomNormalLayer
 export GaussianKLLossLayer
@@ -211,6 +212,7 @@ include("layers/tied-inner-product.jl")
 include("layers/identity.jl")
 include("layers/random-normal.jl")
 include("layers/lookup-table.jl")
+include("layers/replication.jl")
 
 #############################################################
 # Utility layers
