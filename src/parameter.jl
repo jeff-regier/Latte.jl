@@ -72,7 +72,7 @@ function make_sparse_param{N}(backend::Backend, name::AbstractString,
   Parameter(name, blob, grad, init, regu, cons, lr, rc)
 end
 
-function destroy(param::SparseParameter)
+function destroy(param::SparseParam)
   destroy(param.gradient)
   destroy(param.gradient_cols)
   if dec(param.rc) == 0

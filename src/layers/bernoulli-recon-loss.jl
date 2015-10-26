@@ -2,8 +2,8 @@
 
 
 @defstruct BernoulliReconLossLayer Layer (
-    name :: String = "bernoulli-recon-loss",
-    (weight :: FloatingPoint = 1.0, weight >= 0),
+    name :: AbstractString = "bernoulli-recon-loss",
+    (weight :: AbstractFloat = 1.0, weight >= 0),
     (bottoms :: Vector{Symbol} = Symbol[:p, :x], length(bottoms) == 2),
 )
 

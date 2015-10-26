@@ -2,8 +2,8 @@
 
 
 @defstruct GaussianReconLossLayer Layer (
-    name :: String = "gaussian-recon-loss",
-    (weight :: FloatingPoint = 1.0, weight >= 0),
+    name :: AbstractString = "gaussian-recon-loss",
+    (weight :: AbstractFloat = 1.0, weight >= 0),
     (bottoms :: Vector{Symbol} = Symbol[:mu, :sigma, :x], length(bottoms) == 3),
 )
 
