@@ -59,7 +59,7 @@ function test_bernoulli_recon_loss_layer(backend::Backend, T, eps)
 
     for k in 1:D, j in 1:N
         x0 = input1[k, j]
-        function f(x::FloatingPoint)
+        function f(x::AbstractFloat)
             input1[k, j] = x
             copy!(inputs[1], input1)
             forward(backend, state, inputs)
@@ -126,7 +126,7 @@ function test_bernoulli_hyperparameter(backend::Backend)
 
     for k in 1:D, j in 1:1
         x0 = input1[k, j]
-        function f(x::FloatingPoint)
+        function f(x::AbstractFloat)
             input1[k, j] = x
             copy!(inputs[1], input1)
             forward(backend, state, inputs)
