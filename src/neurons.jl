@@ -47,6 +47,7 @@ end
 
 # Exponential Rectified-Linear
 type ExpReLU <: ActivationFunction
+    t::AbstractFloat
 end
 
 # Epsilon Rectified-Linear
@@ -111,13 +112,13 @@ end
 function forward(backend :: CPUBackend, neuron :: Neurons.ExpReLU, output :: Blob)
   @simd for i = 1:length(output.data)
      @inbounds x = output.data[i]
-     @inbounds output.data[i] = x < 0. ? exp(x) : 1 + x
+     @inbounds output.data[i] = x < neuron.t ? exp(x) : exp(neuron.t) + (x - neuron.t)
   end
 end
 function backward(backend :: CPUBackend, neuron :: Neurons.ExpReLU, output :: Blob, gradient :: Blob)
   @simd for i = 1:length(output.data)
      @inbounds x = output.data[i]
-     @inbounds gradient.data[i] *= x < 0. ? exp(x) : 1.
+     @inbounds gradient.data[i] *= x < neuron.t ? exp(x) : 1.
   end
 end
 

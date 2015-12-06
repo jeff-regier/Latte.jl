@@ -36,6 +36,9 @@ type ElementWiseLayerState{Op<:ElementWiseFunctorType} <: LayerState
 end
 
 function setup(backend::Backend, layer::ElementWiseLayer, inputs::Vector{Blob}, diffs::Vector{Blob})
+  println( size(inputs[1]) )
+  println( size(inputs[2]) )
+  println( "------")
   @assert all(map(i -> size(inputs[i]) == size(inputs[1]), 2:length(inputs)))
   blobs = Blob[make_blob(backend, eltype(inputs[1]), size(inputs[1]))]
   if all(map(b -> isa(b, NullBlob), diffs))

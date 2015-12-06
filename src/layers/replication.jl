@@ -9,14 +9,22 @@
 )
 
 type ReplicationLayerState <: LayerState
-    layer            :: ReplicationLayer
-    blobs            :: Vector{Blob}
+    layer      :: ReplicationLayer
+    blobs      :: Vector{Blob}
     blobs_diff :: Vector{Blob}
+    etc        :: Any
+end
+
+
+function setup_etc(backend::CPUBackend, layer::ReplicationLayer,
+        inputs::Vector{Blob}, diffs::Vector{Blob})
+    nothing
 end
 
 function setup(backend::Backend, layer::ReplicationLayer, inputs::Vector{Blob},
                 diffs::Vector{Blob})
     data_type = eltype(inputs[1])
+    @assert ndims(inputs[1]) == 2
     output_dim = (layer.num_copies, size(inputs[1])...)
     blobs = [make_blob(backend, data_type, output_dim)]
 
@@ -26,7 +34,8 @@ function setup(backend::Backend, layer::ReplicationLayer, inputs::Vector{Blob},
         blobs_diff = [make_blob(backend, data_type, output_dim)]
     end
 
-    state = ReplicationLayerState(layer, blobs, blobs_diff)
+    etc = setup_etc(backend, layer, inputs, diffs)
+    state = ReplicationLayerState(layer, blobs, blobs_diff, etc)
 end
 
 function shutdown(backend::Backend, state::ReplicationLayerState)
